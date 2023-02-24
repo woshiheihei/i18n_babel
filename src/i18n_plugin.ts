@@ -59,6 +59,16 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 
 				}
 			},
+			JSXExpressionContainer: {
+				enter: (path: BabelCore.NodePath<t.JSXExpressionContainer>) => {
+					if (path.node.expression.type === "StringLiteral") {
+						let text = path.node.expression.value;
+						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+						path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+						isReplace = true;
+					}
+				}
+			},
 			JSXAttribute: {
 				enter: (path: BabelCore.NodePath<t.JSXAttribute>) => {
 					if (!path.node.value) return;

@@ -37,11 +37,11 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
 // 打开并读取 zh.json 文件
 const filePath = path.join(__dirname, 'zh.json');
 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+const folderPath = '/home/ubuntu/code/ts/i18n-babel/test';
 
 // 遍历字典对象
 for (const [key, value] of Object.entries(data)) {
   const searchStr = value as string;
-  const folderPath = '/home/ubuntu/code/ts/i18n-babel/test';
   let replaceStr = key;
   search_string_in_folder(searchStr, folderPath, replaceStr);
 }
