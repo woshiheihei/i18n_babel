@@ -7,10 +7,13 @@
   },
   "dependencies": {
     "@types/immutable": "^3.8.7",
+    "@types/jaro-winkler": "^0.2.1",
     "@types/mockjs": "^1.0.4",
     "@vitejs/plugin-vue-jsx": "^1.1.6",
     "immutable": "^4.0.0-rc.14",
+    "jaro-winkler": "^0.2.8",
     "mockjs": "^1.1.0",
+    "natural": "^6.2.0",
     "rxjs": "^7.3.0",
     "sass": "^1.35.2",
     "vue": "^3.2.20",

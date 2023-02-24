@@ -1,10 +1,15 @@
 import * as t from "@babel/types"
 import BabelCore from '@babel/core'
-import { ref } from "vue"
+import natural from "natural"
+
+function checkSimilarityWithDiceCoefficient(str1: string, str2: string, threshold = 0.6) {
+	const dice = natural.DiceCoefficient(str1, str2);
+	return dice > threshold;
+}
 
 
 const plugin = (api: any, options: any, dirname: any) => {
-	let searchStr = "添加标签"
+	let searchStr = "添加标签！"
 	let replaceStr = "add label"
 	let import_react_i18next_flag = false;
 	let isReplace = false;
@@ -38,6 +43,7 @@ const plugin = (api: any, options: any, dirname: any) => {
 			ImportDeclaration: {
 				enter(path: BabelCore.NodePath<t.ImportDeclaration>) {
 					const source = path.node.source.value
+
 					if (source === "react-i18next") {
 						import_react_i18next_flag = true;
 					}
@@ -46,22 +52,25 @@ const plugin = (api: any, options: any, dirname: any) => {
 			JSXText: {
 				enter: (path: BabelCore.NodePath<t.JSXText>) => {
 					// console.log(path.node)
-					if (path.node.value === searchStr) {
-						path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-						isReplace = true;
+					let text = path.node.value;
+					if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
 
-					}
+					path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+					isReplace = true;
+
 				}
 			},
 			JSXAttribute: {
 				enter: (path: BabelCore.NodePath<t.JSXAttribute>) => {
 					if (!path.node.value) return;
-					if (path.node.value.type === "StringLiteral") {
-						if (path.node.value.value === searchStr) {
-							path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
-							isReplace = true;
 
-						}
+					if (path.node.value.type === "StringLiteral") {
+						let text = path.node.value.value;
+						if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
+
+						path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
+						isReplace = true;
+
 					}
 				}
 			},
@@ -73,13 +82,14 @@ const plugin = (api: any, options: any, dirname: any) => {
 						if (arg.type !== "StringLiteral") {
 							return;
 						}
-						if (arg.value === searchStr) {
-							path.replaceWith(t.callExpression(
-								path.node.callee,
-								[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
-							))
-							isReplace = true;
-						}
+						let text = arg.value;
+						if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
+						path.replaceWith(t.callExpression(
+							path.node.callee,
+							[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
+						))
+						isReplace = true;
+
 					})
 				}
 			},

@@ -13,8 +13,6 @@ const TagIcon4SelectedData = ({
   selectedStudyInstanceUIDList,
   updateOuterComponent,
 }) => {
-  const { t1234 } = useTranslation();
- 
   const onClickHandle = e => {
     e.stopPropagation();
     if (selectedStudyInstanceUIDList.length === 0) {
@@ -46,7 +44,7 @@ const TagIcon4SelectedData = ({
 };
 
 
-const test02 = ({
+const Test02 = ({
   studyList,
   selectedStudyInstanceUIDList,
   updateOuterComponent,
