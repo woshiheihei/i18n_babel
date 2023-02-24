@@ -8,9 +8,8 @@ function checkSimilarityWithDiceCoefficient(str1: string, str2: string, threshol
 }
 
 
-const plugin = (api: any, options: any, dirname: any) => {
-	let searchStr = "添加标签！"
-	let replaceStr = "add label"
+const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: number = 0.6) => {
+
 	let import_react_i18next_flag = false;
 	let isReplace = false;
 	let hadUseTranslation = false;
@@ -53,7 +52,7 @@ const plugin = (api: any, options: any, dirname: any) => {
 				enter: (path: BabelCore.NodePath<t.JSXText>) => {
 					// console.log(path.node)
 					let text = path.node.value;
-					if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
+					if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 
 					path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
 					isReplace = true;
@@ -66,7 +65,7 @@ const plugin = (api: any, options: any, dirname: any) => {
 
 					if (path.node.value.type === "StringLiteral") {
 						let text = path.node.value.value;
-						if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
+						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 
 						path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
 						isReplace = true;
@@ -83,7 +82,7 @@ const plugin = (api: any, options: any, dirname: any) => {
 							return;
 						}
 						let text = arg.value;
-						if (!checkSimilarityWithDiceCoefficient(text, searchStr)) return;
+						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 						path.replaceWith(t.callExpression(
 							path.node.callee,
 							[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
