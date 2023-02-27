@@ -9,20 +9,108 @@ function checkSimilarityWithDiceCoefficient(str1: string, str2: string, threshol
 
 
 const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: number = 0.6) => {
+	console.log("******************************************************************************************");
+	console.log('replaceStr: ', replaceStr);
+	console.log('searchStr: ', searchStr);
 
 	let import_react_i18next_flag = false;
-	let isReplace = false;
 	let neededImport = false;
-	let hadUseTranslation = false;
+	let cache: Record<string, {
+		isReplace: boolean,
+		hadUseTranslation: boolean
+	}> = {}
 
 	const useTranslationVisitor = {
 		Identifier(path: BabelCore.NodePath<t.Identifier>) {
-			// Identifier 是否为useTranslation
 			if (path.node.name === "useTranslation") {
-				hadUseTranslation = true;
+				console.log('检测到useTranslation: ');
+				// @ts-ignore
+				this.cacheNode.hadUseTranslation = true;
+				path.stop();
 			}
 		}
 	}
+
+	let replaceVisitor = {
+		ObjectProperty(path: BabelCore.NodePath<t.ObjectProperty>) {
+			if (path.node.key.type !== "Identifier") return;
+			if (path.node.value.type !== "StringLiteral") return;
+			let text = path.node.value.value;
+			if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+			path.replaceWith(t.objectProperty(path.node.key, t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+			neededImport = true;
+			// @ts-ignore
+
+			this.cacheNode.isReplace = true;
+
+		},
+		JSXText(path: BabelCore.NodePath<t.JSXText>) {
+			let text = path.node.value;
+			if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+
+			path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+			neededImport = true;
+
+
+			// @ts-ignore
+			this.cacheNode.isReplace = true;
+
+		},
+		JSXExpressionContainer
+			(path: BabelCore.NodePath<t.JSXExpressionContainer>) {
+			if (path.node.expression.type === "StringLiteral") {
+				let text = path.node.expression.value;
+				if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+				path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+				neededImport = true;
+
+
+				// @ts-ignore
+				this.cacheNode.isReplace = true;
+
+			}
+		},
+		JSXAttribute(path: BabelCore.NodePath<t.JSXAttribute>) {
+			// @ts-ignore
+			if (!path.node.value) return;
+
+			if (path.node.value.type === "StringLiteral") {
+				let text = path.node.value.value;
+				if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+
+				path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
+				neededImport = true;
+
+
+				// @ts-ignore
+				this.cacheNode.isReplace = true;
+				console.log("JSXAttributecache", cache);
+				// @ts-ignore
+				console.log('JSXAttributethis.cacheNode: ', this.cacheNode);
+
+			}
+		},
+		CallExpression(path: BabelCore.NodePath<t.CallExpression>) {
+			if (path.node.arguments.length === 0) return;
+			let args = path.node.arguments;
+			args.forEach((arg: any) => {
+				if (arg.type !== "StringLiteral") {
+					return;
+				}
+				let text = arg.value;
+				if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+				path.replaceWith(t.callExpression(
+					path.node.callee,
+					[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
+				))
+				neededImport = true;
+				// @ts-ignore
+				this.cacheNode.isReplace = true;
+
+			})
+		}
+
+	};
 
 	return {
 		name: "closure-id",
@@ -50,103 +138,52 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 					}
 				},
 			},
-			ObjectProperty: {
-				enter: (path: BabelCore.NodePath<t.ObjectProperty>) => {
-					if (path.node.key.type !== "Identifier") return;
-					if (path.node.value.type !== "StringLiteral") return;
-					let text = path.node.value.value;
-					if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
-					path.replaceWith(t.objectProperty(path.node.key, t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-					neededImport = isReplace = true;
-				}
-			},
-			JSXText: {
-				enter: (path: BabelCore.NodePath<t.JSXText>) => {
-					let text = path.node.value;
-					if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 
-					path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-					neededImport = isReplace = true;
-
-				}
-			},
-			JSXExpressionContainer: {
-				enter: (path: BabelCore.NodePath<t.JSXExpressionContainer>) => {
-					if (path.node.expression.type === "StringLiteral") {
-						let text = path.node.expression.value;
-						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
-						path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-						neededImport = isReplace = true;
-					}
-				}
-			},
-			JSXAttribute: {
-				enter: (path: BabelCore.NodePath<t.JSXAttribute>) => {
-					if (!path.node.value) return;
-
-					if (path.node.value.type === "StringLiteral") {
-						let text = path.node.value.value;
-						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
-
-						path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
-						neededImport = isReplace = true;
-
-					}
-				}
-			},
-			CallExpression: {
-				enter: (path: BabelCore.NodePath<t.CallExpression>) => {
-					if (path.node.arguments.length === 0) return;
-					let args = path.node.arguments;
-					args.forEach((arg: any) => {
-						if (arg.type !== "StringLiteral") {
-							return;
-						}
-						let text = arg.value;
-						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
-						path.replaceWith(t.callExpression(
-							path.node.callee,
-							[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
-						))
-						neededImport = isReplace = true;
-
-					})
-				}
-			},
-			"VariableDeclarator|FunctionDeclaration": {
-				enter: (path: BabelCore.NodePath<t.VariableDeclarator | t.FunctionDeclaration>) => {
+			"VariableDeclarator|FunctionDeclaration|FunctionExpression": {
+				enter: (path: BabelCore.NodePath<t.VariableDeclarator | t.FunctionDeclaration | t.FunctionExpression>) => {
 					let node = path.node;
 					if (!node.id) return;
 					if (node.id && node.id.type !== "Identifier") return;
 					// 判断path.node.id.name首字母是否大写或者是否以use开头
 					if (node.id.name[0] !== node.id.name[0].toUpperCase() && node.id.name.slice(0, 3) !== "use") return;
 
-					// 如果当前是VariableDeclarator且不是箭头函数，直接return
-					if (t.isVariableDeclarator(node) && !t.isArrowFunctionExpression(node.init)) return;
+
+					if (!cache[node.id.name]) cache[node.id.name] = {
+						hadUseTranslation: false,
+						isReplace: false
+					};
+					let cacheNode = cache[node.id.name];
+
 					// 下面表名有可能是组件
-					path.traverse(useTranslationVisitor);
+					path.traverse(useTranslationVisitor, { cacheNode });
+					path.traverse(replaceVisitor, { cacheNode })
+
 				},
-				exit: (path: BabelCore.NodePath<t.VariableDeclarator | t.FunctionDeclaration>) => {
+				exit: (path: BabelCore.NodePath<t.VariableDeclarator | t.FunctionDeclaration | t.FunctionExpression>) => {
 					let node = path.node;
 					if (!node.id) return;
 					if (node.id && node.id.type !== "Identifier") return;
 					// 判断path.node.id.name首字母是否大写或者是否以use开头
 					if (node.id.name[0] !== node.id.name[0].toUpperCase() && node.id.name.slice(0, 3) !== "use") return;
 
-					// 如果当前是VariableDeclarator且不是箭头函数，直接return
-					if (t.isVariableDeclarator(node) && !t.isArrowFunctionExpression(node.init)) return;
+					let blockStatement = t.isVariableDeclarator(node) && t.isArrowFunctionExpression(node.init) ? node.init.body : t.isFunctionDeclaration(node) || t.isFunctionExpression(node) ? node.body : null;
 
-					let blockStatement = t.isVariableDeclarator(node) && t.isArrowFunctionExpression(node.init) ? node.init.body : t.isFunctionDeclaration(node) ? node.body : null;
+					let cacheNode = cache[node.id.name];
+					console.log('exit: ', node.id.name);
+					console.log('cache: ', cache);
+					console.log('cacheNode: ', cacheNode);
 
 					// 下面表名有可能是组件
-					if (isReplace && !hadUseTranslation) {
+					if (cacheNode.isReplace && !cacheNode.hadUseTranslation) {
+						console.log('函数块: ', node.id.name);
 						if (!t.isBlockStatement(blockStatement)) return;
 						// 往函数块内部插入const { t } = useTranslation();
 						blockStatement.body.unshift(t.variableDeclaration("const", [t.variableDeclarator(t.objectPattern([t.objectProperty(t.identifier("t"), t.identifier("t"), false, true)]), t.callExpression(t.identifier("useTranslation"), []))]))
+						// cacheNode.isReplace = false;
+						// cacheNode.hadUseTranslation = false;
 					}
 
-					isReplace = false;
-					hadUseTranslation = false;
+
 				}
 			}
 		}

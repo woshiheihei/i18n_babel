@@ -30,7 +30,7 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
       let content = cache[filePath];
 
       try {
-        const result = babel.transform(content, {
+        const result = babel.transformSync(content, {
           babelrc: false,
           ast: true,
           plugins: [plugin(searchStr, replaceStr, 0.6), "@babel/plugin-syntax-jsx", ["@babel/plugin-proposal-decorators", { "legacy": true }]],
@@ -40,6 +40,7 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
         if (!result?.code) return;
         // result.code 写入到缓存中
         cache[filePath] = result.code;
+        console.log('result.code: ', result.code);
       } catch (error) {
         console.log('error: ', error);
       }
@@ -52,7 +53,7 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
 // 打开并读取 zh.json 文件
 const filePath = path.join(__dirname, 'zh.json');
 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-const folderPath = '/home/tavimercy/code/tavi-as/tavi-as-customer-frontend/platform/tavi/src/view/studyList/hooks';
+const folderPath = '/home/tavimercy/code/tavi-as/tavi-as-customer-frontend/platform/tavi/src/view/studyList/components/StudyTableHeader';
 // const folderPath = '/home/weibao/code/ts/i18n_babel/test';
 
 
