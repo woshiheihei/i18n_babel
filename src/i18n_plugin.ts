@@ -118,8 +118,8 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 					let node = path.node;
 					if (!node.id) return;
 					if (node.id && node.id.type !== "Identifier") return;
-					// 判断path.node.id.name首字母是否大写
-					if (node.id.name[0] !== node.id.name[0].toUpperCase()) return;
+					// 判断path.node.id.name首字母是否大写或者是否以use开头
+					if (node.id.name[0] !== node.id.name[0].toUpperCase() && node.id.name.slice(0, 3) !== "use") return;
 
 					// 如果当前是VariableDeclarator且不是箭头函数，直接return
 					if (t.isVariableDeclarator(node) && !t.isArrowFunctionExpression(node.init)) return;
@@ -130,8 +130,8 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 					let node = path.node;
 					if (!node.id) return;
 					if (node.id && node.id.type !== "Identifier") return;
-					// 判断path.node.id.name首字母是否大写
-					if (node.id.name[0] !== node.id.name[0].toUpperCase()) return;
+					// 判断path.node.id.name首字母是否大写或者是否以use开头
+					if (node.id.name[0] !== node.id.name[0].toUpperCase() && node.id.name.slice(0, 3) !== "use") return;
 
 					// 如果当前是VariableDeclarator且不是箭头函数，直接return
 					if (t.isVariableDeclarator(node) && !t.isArrowFunctionExpression(node.init)) return;
