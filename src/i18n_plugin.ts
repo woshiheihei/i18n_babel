@@ -12,6 +12,7 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 
 	let import_react_i18next_flag = false;
 	let isReplace = false;
+	let neededImport = false;
 	let hadUseTranslation = false;
 
 	const useTranslationVisitor = {
@@ -28,7 +29,8 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 		visitor: {
 			Program: {
 				exit(path: BabelCore.NodePath<t.Program>) {
-					if (!import_react_i18next_flag) {
+
+					if (!import_react_i18next_flag && neededImport) {
 						// 往顶部插入import { useTranslation } from 'react-i18next';
 						path.node.body.unshift(t.importDeclaration(
 							[
@@ -48,14 +50,23 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 					}
 				},
 			},
+			ObjectProperty: {
+				enter: (path: BabelCore.NodePath<t.ObjectProperty>) => {
+					if (path.node.key.type !== "Identifier") return;
+					if (path.node.value.type !== "StringLiteral") return;
+					let text = path.node.value.value;
+					if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
+					path.replaceWith(t.objectProperty(path.node.key, t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
+					neededImport = isReplace = true;
+				}
+			},
 			JSXText: {
 				enter: (path: BabelCore.NodePath<t.JSXText>) => {
-					// console.log(path.node)
 					let text = path.node.value;
 					if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 
 					path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-					isReplace = true;
+					neededImport = isReplace = true;
 
 				}
 			},
@@ -65,7 +76,7 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 						let text = path.node.expression.value;
 						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 						path.replaceWith(t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])))
-						isReplace = true;
+						neededImport = isReplace = true;
 					}
 				}
 			},
@@ -78,7 +89,7 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 						if (!checkSimilarityWithDiceCoefficient(text, searchStr, similarityBaseThreshold)) return;
 
 						path.replaceWith(t.jsxAttribute(path.node.name, t.jsxExpressionContainer(t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)]))))
-						isReplace = true;
+						neededImport = isReplace = true;
 
 					}
 				}
@@ -97,7 +108,7 @@ const plugin = (searchStr: string, replaceStr: string, similarityBaseThreshold: 
 							path.node.callee,
 							[t.callExpression(t.identifier("t"), [t.stringLiteral(replaceStr)])]
 						))
-						isReplace = true;
+						neededImport = isReplace = true;
 
 					})
 				}

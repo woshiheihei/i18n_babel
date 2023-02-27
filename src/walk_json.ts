@@ -18,12 +18,14 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
     if (stats.isDirectory()) {
       search_string_in_folder(searchStr, filePath, replaceStr);
     } else if (stats.isFile()) {
+      // 如果是文件则判断是否为 .js 文件
+      if (!file.endsWith('.js')) continue;
       // 拼出文件的绝对路径
       const filePath = path.join(folderPath, file);
       const result = babel.transformFileSync(filePath, {
         babelrc: false,
         ast: true,
-        plugins: [plugin(searchStr, replaceStr, 0.9), "@babel/plugin-syntax-jsx"],
+        plugins: [plugin(searchStr, replaceStr, 0.7), "@babel/plugin-syntax-jsx"],
         // presets: ["@babel/preset-react"],
         configFile: false,
       })
@@ -37,7 +39,9 @@ const search_string_in_folder: SearchStringInFolderFn = (searchStr, folderPath, 
 // 打开并读取 zh.json 文件
 const filePath = path.join(__dirname, 'zh.json');
 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-const folderPath = '/home/ubuntu/code/ts/i18n-babel/test';
+// const folderPath = '/home/tavimercy/code/tavi-as/tavi-as-customer-frontend/platform/viewer/src';
+const folderPath = '/home/weibao/code/ts/i18n_babel/test';
+
 
 // 遍历字典对象
 for (const [key, value] of Object.entries(data)) {
